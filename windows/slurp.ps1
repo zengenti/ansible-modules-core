@@ -28,11 +28,28 @@ If (-not $src)
 If (Test-Path -PathType Leaf $src)
 {
     $bytes = [System.IO.File]::ReadAllBytes($src);
-    $content = [System.Convert]::ToBase64String($bytes);
+
+    $containsBOM = $FALSE
+    if ($bytes.Length -gt 2 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF){
+        $containsBOM = $TRUE
+        $content = [System.Convert]::ToBase64String($bytes[3..($bytes.length -3)]);
+    }
+    Elseif ($bytes.Length -gt 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE){
+        $containsBOM = $TRUE
+        $content = [System.Convert]::ToBase64String($bytes[2..($bytes.length)]);
+    }
+    Else{
+        $containsBOM = $FALSE
+        $content = [System.Convert]::ToBase64String($bytes);    
+    }
+    #$content = [System.Convert]::ToBase64String($bytes);    
+    
     $result = New-Object psobject @{
         changed = $false
         encoding = "base64"
         content = $content
+        contained_bom = $containsBOM
+        src = $src
     };
     Exit-Json $result;
 }
